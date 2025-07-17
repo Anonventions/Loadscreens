@@ -170,6 +170,25 @@ frames:
   - "Location: &7%player_x%, %player_y%, %player_z%"
 ```
 
+## 🔧 Platform Integrations
+
+### Nexo Platform
+For detailed instructions on integrating Loadscreens with Nexo (custom items, blocks, and furniture), see our comprehensive [Nexo Integration Guide](wiki/Nexo-Integration-Guide.md).
+
+**Quick Nexo Setup**:
+```yaml
+loadscreen_types:
+  nexo_crafting:
+    enabled: true
+    show_on_nexo_craft: true
+    frames:
+      - "&eProcessing Nexo item..."
+      - "&e%nexo_item_name%"
+    placeholders:
+      - "%nexo_item_name%"
+      - "%nexo_item_rarity%"
+```
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
@@ -201,7 +220,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [GitHub Repository](https://github.com/Anonventions/Loadscreens)
 - [Issue Tracker](https://github.com/Anonventions/Loadscreens/issues)
-- [Wiki](https://github.com/Anonventions/Loadscreens/wiki)
+- [Wiki](wiki/README.md) - Comprehensive documentation and integration guides
 
 ## 👥 Credits
 
