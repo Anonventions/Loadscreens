@@ -1,14 +1,15 @@
 # Loadscreens Plugin
-<p align="center">
-  <img src="https://i.imgur.com/lqQKHJQ.gif" width="400" alt="Project demo GIF">
-</p>
-
 
 ![Loadscreens Banner](https://img.shields.io/badge/Loadscreens-v3.0%20Ultimate-blue?style=for-the-badge)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.20+-green?style=for-the-badge)
 ![Java Version](https://img.shields.io/badge/Java-17+-orange?style=for-the-badge)
 
 A powerful and feature-rich Minecraft plugin that provides customizable animated loading screens for various in-game events.
+
+<p align="center">
+  <img src="https://i.imgur.com/lqQKHJQ.gif" width="400" alt="Project demo GIF">
+</p>
+
 
 ## 🌟 Features
 
