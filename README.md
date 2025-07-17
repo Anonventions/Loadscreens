@@ -202,6 +202,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [GitHub Repository](https://github.com/Anonventions/Loadscreens)
 - [Issue Tracker](https://github.com/Anonventions/Loadscreens/issues)
 - [Wiki](https://github.com/Anonventions/Loadscreens/wiki)
+- **Discord**: [Link](https://discord.gg/SG8jvb9WU5)]
 
 ## 👥 Credits
 
