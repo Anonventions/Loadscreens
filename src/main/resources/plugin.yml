@@ -1,0 +1,8 @@
+name: Loadscreens
+version: '1.0'
+main: org.anonventions.loadscreens.Loadscreens
+api-version: '1.20'
+load: STARTUP
+authors: [ Axmon, amon_m, anonventions ]
+description: Wardrobe is a plugin for saving and managing skins!
+website: https://github.com/Anonventions
