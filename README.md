@@ -1,4 +1,5 @@
 # Loadscreens Plugin
+![Alt text describing the animation](https://i.imgur.com/lqQKHJQ.gif)
 
 ![Loadscreens Banner](https://img.shields.io/badge/Loadscreens-v3.0%20Ultimate-blue?style=for-the-badge)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.20+-green?style=for-the-badge)
