@@ -207,8 +207,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Development Team**
 - Axmon - Lead Developer
-- amon_m - Core Developer  
-- Anonventions - Project Maintainer
+- Turretedash7 - Lead Developer
+- Anonventions - Project Maintainers
 
 **Special Thanks**
 - Paper Development Team
