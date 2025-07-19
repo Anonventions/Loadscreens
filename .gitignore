@@ -111,3 +111,19 @@ buildNumber.properties
 
 # Common working directory
 run/
+
+# Animation Creator output directories
+animation_creator/output/
+animation_creator/examples/*.png
+animation_creator/examples/*.gif
+animation_creator/examples/*.json
+animation_creator/*.png
+animation_creator/*.gif
+animation_creator/*.json
+
+# Python cache
+animation_creator/src/__pycache__/
+animation_creator/src/*/__pycache__/
+animation_creator/src/*/*/__pycache__/
+*.pyc
+*.pyo
