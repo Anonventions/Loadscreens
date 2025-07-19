@@ -1,5 +1,6 @@
-package org.anonventions.loadscreens;
+package org.anonventions.loadscreens.core;
 
+import org.anonventions.loadscreens.util.LoadscreenManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
