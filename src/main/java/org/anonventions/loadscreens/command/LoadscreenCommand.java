@@ -16,10 +16,30 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Command executor for the main /loadscreen command.
+ * 
+ * <p>This class handles all loadscreen-related commands including:
+ * <ul>
+ *   <li>reload - Reload the plugin configuration</li>
+ *   <li>test - Test a loadscreen type</li>
+ *   <li>show - Show a loadscreen to a specific player</li>
+ *   <li>stop - Stop the sender's loadscreen</li>
+ *   <li>stopall - Stop all active loadscreens</li>
+ *   <li>info - Display plugin information</li>
+ *   <li>stats - Display session statistics</li>
+ *   <li>types - List available loadscreen types</li>
+ * </ul>
+ * 
+ * @author Anonventions
+ * @since 1.0
+ */
+
 public class LoadscreenCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // Permission check
         if (!sender.hasPermission("loadscreens.admin")) {
             sender.sendMessage(Component.text("You don't have permission to use this command.")
                     .color(NamedTextColor.RED));
@@ -31,99 +51,163 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
-            case "reload":
-                Loadscreens.getInstance().reloadConfig();
-                // Reload placeholder manager if available
-                if (Loadscreens.getInstance().isPlaceholderAPIEnabled()) {
-                    Loadscreens.getInstance().getPlaceholderManager().reloadCustomPlaceholders();
-                }
-                sender.sendMessage(Component.text("Loadscreens config reloaded successfully!")
-                        .color(NamedTextColor.GREEN));
-                break;
+        String subCommand = args[0].toLowerCase();
+        
+        try {
+            switch (subCommand) {
+                case "reload":
+                    handleReload(sender);
+                    break;
 
-            case "test":
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage(Component.text("Only players can test loadscreens.")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
+                case "test":
+                    handleTest(sender, args);
+                    break;
 
-                Player player = (Player) sender;
-                String type = args.length > 1 ? args[1] : "join";
+                case "show":
+                    handleShow(sender, args);
+                    break;
 
-                LoadscreenManager.showLoadscreen(player, type);
-                sender.sendMessage(Component.text("Loadscreen test sent! Type: " + type)
-                        .color(NamedTextColor.GREEN));
-                break;
+                case "stop":
+                    handleStop(sender);
+                    break;
 
-            case "show":
-                if (args.length < 3) {
-                    sender.sendMessage(Component.text("Usage: /loadscreen show <player> <type> [delay]")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
+                case "stopall":
+                    handleStopAll(sender);
+                    break;
 
-                Player target = Bukkit.getPlayer(args[1]);
-                if (target == null) {
-                    sender.sendMessage(Component.text("Player not found: " + args[1])
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
+                case "info":
+                    sendInfo(sender);
+                    break;
 
-                String showType = args[2];
-                int delay = args.length > 3 ? parseInt(args[3], 0) : 0;
+                case "stats":
+                    sendStats(sender);
+                    break;
 
-                LoadscreenManager.showLoadscreen(target, showType, delay);
-                sender.sendMessage(Component.text("Loadscreen sent to " + target.getName() + " (Type: " + showType + ", Delay: " + delay + ")")
-                        .color(NamedTextColor.GREEN));
-                break;
+                case "types":
+                    sendTypes(sender);
+                    break;
 
-            case "stop":
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage(Component.text("Only players can stop their own loadscreens.")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
-
-                Player player2 = (Player) sender;
-                if (LoadscreenManager.hasActiveLoadscreen(player2)) {
-                    LoadscreenManager.stopLoadscreen(player2);
-                    sender.sendMessage(Component.text("Loadscreen stopped!")
-                            .color(NamedTextColor.GREEN));
-                } else {
-                    sender.sendMessage(Component.text("You don't have an active loadscreen.")
-                            .color(NamedTextColor.YELLOW));
-                }
-                break;
-
-            case "stopall":
-                int count = LoadscreenManager.getActiveSessionCount();
-                LoadscreenManager.stopAllLoadscreens();
-                sender.sendMessage(Component.text("Stopped " + count + " active loadscreens!")
-                        .color(NamedTextColor.GREEN));
-                break;
-
-            case "info":
-                sendInfo(sender);
-                break;
-
-            case "stats":
-                sendStats(sender);
-                break;
-
-            case "types":
-                sendTypes(sender);
-                break;
-
-            default:
-                sendHelp(sender);
-                break;
+                default:
+                    sendHelp(sender);
+                    break;
+            }
+        } catch (Exception e) {
+            sender.sendMessage(Component.text("An error occurred while executing the command: " + e.getMessage())
+                    .color(NamedTextColor.RED));
+            Loadscreens.getInstance().getLogger().severe("Error in command execution: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return true;
     }
 
+    /**
+     * Handles the reload subcommand.
+     */
+    private void handleReload(CommandSender sender) {
+        Loadscreens.getInstance().reloadConfig();
+        // Reload placeholder manager if available
+        if (Loadscreens.getInstance().isPlaceholderAPIEnabled()) {
+            Loadscreens.getInstance().getPlaceholderManager().reloadCustomPlaceholders();
+        }
+        sender.sendMessage(Component.text("Loadscreens config reloaded successfully!")
+                .color(NamedTextColor.GREEN));
+    }
+
+    /**
+     * Handles the test subcommand.
+     */
+    private void handleTest(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Only players can test loadscreens.")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        Player player = (Player) sender;
+        String type = args.length > 1 ? args[1].trim() : "join";
+        
+        if (type.isEmpty()) {
+            sender.sendMessage(Component.text("Type cannot be empty.")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        LoadscreenManager.showLoadscreen(player, type);
+        sender.sendMessage(Component.text("Loadscreen test sent! Type: " + type)
+                .color(NamedTextColor.GREEN));
+    }
+
+    /**
+     * Handles the show subcommand.
+     */
+    private void handleShow(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(Component.text("Usage: /loadscreen show <player> <type> [delay]")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null) {
+            sender.sendMessage(Component.text("Player not found: " + args[1])
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        String showType = args[2].trim();
+        if (showType.isEmpty()) {
+            sender.sendMessage(Component.text("Type cannot be empty.")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+        
+        int delay = args.length > 3 ? parseInt(args[3], 0) : 0;
+        if (delay < 0) {
+            sender.sendMessage(Component.text("Delay cannot be negative.")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        LoadscreenManager.showLoadscreen(target, showType, delay);
+        sender.sendMessage(Component.text("Loadscreen sent to " + target.getName() + " (Type: " + showType + ", Delay: " + delay + ")")
+                .color(NamedTextColor.GREEN));
+    }
+
+    /**
+     * Handles the stop subcommand.
+     */
+    private void handleStop(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Only players can stop their own loadscreens.")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        Player player = (Player) sender;
+        if (LoadscreenManager.hasActiveLoadscreen(player)) {
+            LoadscreenManager.stopLoadscreen(player);
+            sender.sendMessage(Component.text("Loadscreen stopped!")
+                    .color(NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("You don't have an active loadscreen.")
+                    .color(NamedTextColor.YELLOW));
+        }
+    }
+
+    /**
+     * Handles the stopall subcommand.
+     */
+    private void handleStopAll(CommandSender sender) {
+        int count = LoadscreenManager.getActiveSessionCount();
+        LoadscreenManager.stopAllLoadscreens();
+        sender.sendMessage(Component.text("Stopped " + count + " active loadscreens!")
+                .color(NamedTextColor.GREEN));
+    }
+
+    /**
+     * Displays the help message with all available commands.
+     */
     private void sendHelp(CommandSender sender) {
         sender.sendMessage(Component.text("=== Loadscreens Commands ===")
                 .color(NamedTextColor.GOLD)
@@ -138,6 +222,9 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("/loadscreen types - List available types").color(NamedTextColor.YELLOW));
     }
 
+    /**
+     * Displays plugin information including version and features.
+     */
     private void sendInfo(CommandSender sender) {
         var config = Loadscreens.getInstance().getConfig();
         sender.sendMessage(Component.text("=== Loadscreens Info ===")
@@ -145,13 +232,16 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
                 .decorate(TextDecoration.BOLD));
         sender.sendMessage(Component.text("Version: 3.0 Ultimate Edition").color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("Author: Anonventions").color(NamedTextColor.GRAY));
-        sender.sendMessage(Component.text("Date: 2025-07-16").color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("Date: 2025-07-19").color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("Enabled: " + config.getBoolean("global.enabled")).color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("PacketEvents: " + (Loadscreens.getInstance().isPacketEventsEnabled() ? "✓" : "✗")).color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("PlaceholderAPI: " + (Loadscreens.getInstance().isPlaceholderAPIEnabled() ? "✓" : "✗")).color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("Debug Mode: " + config.getBoolean("global.debug")).color(NamedTextColor.GRAY));
     }
 
+    /**
+     * Displays current session statistics.
+     */
     private void sendStats(CommandSender sender) {
         sender.sendMessage(Component.text("=== Loadscreen Statistics ===")
                 .color(NamedTextColor.GOLD)
@@ -160,6 +250,9 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("Max Concurrent: " + Loadscreens.getInstance().getConfig().getInt("global.max_concurrent_sessions")).color(NamedTextColor.GRAY));
     }
 
+    /**
+     * Displays all available loadscreen types and their status.
+     */
     private void sendTypes(CommandSender sender) {
         var config = Loadscreens.getInstance().getConfig();
         var typesSection = config.getConfigurationSection("loadscreen_types");
@@ -176,9 +269,18 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
 
                 sender.sendMessage(Component.text(status + " " + type).color(color));
             }
+        } else {
+            sender.sendMessage(Component.text("No loadscreen types configured.").color(NamedTextColor.YELLOW));
         }
     }
 
+    /**
+     * Safely parses an integer from a string with a default fallback.
+     * 
+     * @param str the string to parse
+     * @param defaultValue the default value if parsing fails
+     * @return the parsed integer or the default value
+     */
     private int parseInt(String str, int defaultValue) {
         try {
             return Integer.parseInt(str);

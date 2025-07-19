@@ -20,22 +20,79 @@ import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Manages loadscreen sessions and their lifecycle.
+ * 
+ * <p>This class is responsible for creating, managing, and terminating loadscreen
+ * sessions for players. It handles the creation of text displays, animation loops,
+ * visual effects, and player restrictions during loadscreens.</p>
+ * 
+ * <p>Key features:
+ * <ul>
+ *   <li>Concurrent session management with session limits</li>
+ *   <li>Configurable loadscreen types with different settings</li>
+ *   <li>Visual effects (pulse, wobble, rainbow, typewriter)</li>
+ *   <li>Player restrictions (movement freeze, packet blocking)</li>
+ *   <li>Placeholder support for dynamic content</li>
+ *   <li>Sound integration</li>
+ * </ul>
+ * 
+ * @author Anonventions
+ * @since 1.0
+ */
+
 public class LoadscreenManager {
+    /** Map of active loadscreen sessions by player UUID */
     private static final Map<UUID, LoadscreenSession> activeSessions = new ConcurrentHashMap<>();
+    
+    /** Map tracking last loadscreen time for cooldown management */
     private static final Map<UUID, Long> lastLoadscreen = new ConcurrentHashMap<>();
 
-    // Main method with type support
+    /**
+     * Shows a loadscreen of the specified type to a player.
+     * 
+     * @param player the player to show the loadscreen to
+     * @param type the loadscreen type as configured in config.yml
+     */
     public static void showLoadscreen(Player player, String type) {
         showLoadscreen(player, type, 0);
     }
 
+    /**
+     * Shows a loadscreen of the specified type to a player with a custom delay.
+     * 
+     * @param player the player to show the loadscreen to
+     * @param type the loadscreen type as configured in config.yml
+     * @param customDelay the delay in ticks before showing the loadscreen (overrides config)
+     */
+
     public static void showLoadscreen(Player player, String type, int customDelay) {
+        // Input validation
+        if (player == null) {
+            Loadscreens.getInstance().getLogger().warning("Cannot show loadscreen: player is null");
+            return;
+        }
+        if (type == null || type.trim().isEmpty()) {
+            Loadscreens.getInstance().getLogger().warning("Cannot show loadscreen: type is null or empty");
+            return;
+        }
+        if (customDelay < 0) {
+            Loadscreens.getInstance().getLogger().warning("Cannot show loadscreen: delay cannot be negative, using 0");
+            customDelay = 0;
+        }
+        
         var config = Loadscreens.getInstance().getConfig();
 
-        if (!config.getBoolean("global.enabled", true)) return;
+        if (!config.getBoolean("global.enabled", true)) {
+            if (config.getBoolean("global.debug", false)) {
+                Loadscreens.getInstance().getLogger().info("Loadscreens globally disabled");
+            }
+            return;
+        }
 
         // Check if specific type is enabled
-        if (!config.getBoolean("loadscreen_types." + type + ".enabled", false)) {
+        String basePath = "loadscreen_types." + type;
+        if (!config.getBoolean(basePath + ".enabled", false)) {
             if (config.getBoolean("global.debug", false)) {
                 Loadscreens.getInstance().getLogger().info("Loadscreen type '" + type + "' is disabled");
             }
@@ -43,7 +100,7 @@ public class LoadscreenManager {
         }
 
         // Get delay from config or use custom
-        int delay = customDelay > 0 ? customDelay : config.getInt("loadscreen_types." + type + ".timer_delay", 0);
+        int delay = customDelay > 0 ? customDelay : config.getInt(basePath + ".timer_delay", 0);
 
         // Schedule the loadscreen
         if (delay > 0) {
@@ -59,50 +116,87 @@ public class LoadscreenManager {
     }
 
     private static void showLoadscreenNow(Player player, String type) {
+        // Additional safety check
+        if (player == null || !player.isOnline()) {
+            Loadscreens.getInstance().getLogger().warning("Cannot show loadscreen: player is null or offline");
+            return;
+        }
+        
         var config = Loadscreens.getInstance().getConfig();
         String basePath = "loadscreen_types." + type + ".";
 
-        // Check cooldown
-        long cooldown = config.getLong(basePath + "cooldown_seconds", 0) * 1000L;
-        if (cooldown > 0 && lastLoadscreen.containsKey(player.getUniqueId())) {
-            long timeSince = System.currentTimeMillis() - lastLoadscreen.get(player.getUniqueId());
-            if (timeSince < cooldown) return;
+        try {
+            // Check cooldown
+            long cooldown = config.getLong(basePath + "cooldown_seconds", 0) * 1000L;
+            if (cooldown > 0 && lastLoadscreen.containsKey(player.getUniqueId())) {
+                long timeSince = System.currentTimeMillis() - lastLoadscreen.get(player.getUniqueId());
+                if (timeSince < cooldown) {
+                    if (config.getBoolean("global.debug", false)) {
+                        Loadscreens.getInstance().getLogger().info("Loadscreen for " + player.getName() + " on cooldown");
+                    }
+                    return;
+                }
+            }
+
+            // Check permission
+            if (config.getBoolean(basePath + "require_permission", false) &&
+                    !player.hasPermission(config.getString(basePath + "permission_node", "loadscreens.view"))) {
+                if (config.getBoolean("global.debug", false)) {
+                    Loadscreens.getInstance().getLogger().info("Player " + player.getName() + " lacks permission for loadscreen type: " + type);
+                }
+                return;
+            }
+
+            // Check first join only
+            if (config.getBoolean(basePath + "first_join_only", false) && player.hasPlayedBefore()) {
+                if (config.getBoolean("global.debug", false)) {
+                    Loadscreens.getInstance().getLogger().info("Loadscreen " + type + " is first-join only, skipping for " + player.getName());
+                }
+                return;
+            }
+
+            // Check max concurrent sessions
+            int maxSessions = config.getInt("global.max_concurrent_sessions", 50);
+            if (activeSessions.size() >= maxSessions) {
+                Loadscreens.getInstance().getLogger().warning("Max concurrent sessions (" + maxSessions + ") reached, skipping loadscreen for " + player.getName());
+                return;
+            }
+
+            // Stop existing session
+            stopLoadscreen(player);
+
+            // Create new session
+            LoadscreenSession session = new LoadscreenSession(player, config, type, basePath);
+            activeSessions.put(player.getUniqueId(), session);
+            lastLoadscreen.put(player.getUniqueId(), System.currentTimeMillis());
+
+            session.start();
+            
+        } catch (Exception e) {
+            Loadscreens.getInstance().getLogger().severe("Error showing loadscreen for " + player.getName() + ": " + e.getMessage());
+            e.printStackTrace();
         }
-
-        // Check permission
-        if (config.getBoolean(basePath + "require_permission", false) &&
-                !player.hasPermission(config.getString(basePath + "permission_node", "loadscreens.view"))) {
-            return;
-        }
-
-        // Check first join only
-        if (config.getBoolean(basePath + "first_join_only", false) && player.hasPlayedBefore()) {
-            return;
-        }
-
-        // Check max concurrent sessions
-        int maxSessions = config.getInt("global.max_concurrent_sessions", 50);
-        if (activeSessions.size() >= maxSessions) {
-            Loadscreens.getInstance().getLogger().warning("Max concurrent sessions reached, skipping loadscreen for " + player.getName());
-            return;
-        }
-
-        // Stop existing session
-        stopLoadscreen(player);
-
-        // Create new session
-        LoadscreenSession session = new LoadscreenSession(player, config, type, basePath);
-        activeSessions.put(player.getUniqueId(), session);
-        lastLoadscreen.put(player.getUniqueId(), System.currentTimeMillis());
-
-        session.start();
     }
 
-    // Legacy method for backward compatibility
+    /**
+     * Shows a loadscreen using the default "join" type.
+     * 
+     * <p>This method is provided for backward compatibility with older versions
+     * of the plugin.</p>
+     * 
+     * @param player the player to show the loadscreen to
+     * @deprecated Use {@link #showLoadscreen(Player, String)} instead
+     */
+    @Deprecated
     public static void showLoadscreen(Player player) {
         showLoadscreen(player, "join");
     }
 
+    /**
+     * Stops any active loadscreen for the specified player.
+     * 
+     * @param player the player whose loadscreen should be stopped
+     */
     public static void stopLoadscreen(Player player) {
         LoadscreenSession session = activeSessions.remove(player.getUniqueId());
         if (session != null) {
@@ -110,6 +204,12 @@ public class LoadscreenManager {
         }
     }
 
+    /**
+     * Stops all active loadscreen sessions.
+     * 
+     * <p>This method is typically called during plugin shutdown to ensure
+     * proper cleanup of all resources.</p>
+     */
     public static void stopAllLoadscreens() {
         for (LoadscreenSession session : activeSessions.values()) {
             session.stop();
@@ -117,15 +217,32 @@ public class LoadscreenManager {
         activeSessions.clear();
     }
 
+    /**
+     * Checks if a player has an active loadscreen session.
+     * 
+     * @param player the player to check
+     * @return true if the player has an active loadscreen, false otherwise
+     */
     public static boolean hasActiveLoadscreen(Player player) {
         return activeSessions.containsKey(player.getUniqueId());
     }
 
+    /**
+     * Gets the number of currently active loadscreen sessions.
+     * 
+     * @return the number of active sessions
+     */
     public static int getActiveSessionCount() {
         return activeSessions.size();
     }
 
-    // Session class with enhanced features
+    /**
+     * Represents an individual loadscreen session for a player.
+     * 
+     * <p>This class encapsulates all the data and behavior for a single loadscreen
+     * instance, including configuration loading, display creation, animation management,
+     * and cleanup operations.</p>
+     */
     private static class LoadscreenSession {
         private final Player player;
         private final List<String> frames;
