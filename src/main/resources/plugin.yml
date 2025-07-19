@@ -1,8 +1,32 @@
 name: Loadscreens
 version: '1.0'
-main: org.anonventions.loadscreens.Loadscreens
+main: org.anonventions.loadscreens.core.Loadscreens
 api-version: '1.20'
 load: STARTUP
 authors: [ Axmon, amon_m, anonventions ]
-description: Wardrobe is a plugin for saving and managing skins!
+description: A powerful and feature-rich Minecraft plugin that provides customizable animated loading screens for various in-game events.
 website: https://github.com/Anonventions
+
+commands:
+  loadscreen:
+    description: Main loadscreen command
+    usage: /loadscreen <reload|test|show|stop|stopall|info|stats|types>
+    permission: loadscreens.admin
+    aliases: [ls, loadscr]
+
+permissions:
+  loadscreens.admin:
+    description: Full administrative access to loadscreens
+    default: op
+  loadscreens.use:
+    description: Basic user commands for loadscreens
+    default: true
+  loadscreens.bypass:
+    description: Bypass loadscreens entirely
+    default: false
+  loadscreens.view:
+    description: View loadscreens
+    default: true
+
+depend: []
+softdepend: [PlaceholderAPI, PacketEvents]

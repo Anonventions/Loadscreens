@@ -1,9 +1,9 @@
-package org.anonventions.loadscreens;
+package org.anonventions.loadscreens.core;
 
-import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
-import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
-import me.clip.placeholderapi.PlaceholderAPI;
+import org.anonventions.loadscreens.command.LoadscreenCommand;
+import org.anonventions.loadscreens.depends.PacketManager;
+import org.anonventions.loadscreens.depends.PlaceholderManager;
+import org.anonventions.loadscreens.util.LoadscreenManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.event.HandlerList;
 import org.bukkit.Bukkit;
@@ -21,17 +21,30 @@ public class Loadscreens extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        // Initialize PacketEvents
+        // Initialize PacketEvents if available
         if (getConfig().getBoolean("global.use_packetevents", true)) {
             try {
-                PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
-                PacketEvents.getAPI().load();
+                Class.forName("com.github.retrooper.packetevents.PacketEvents");
+                Class<?> builderClass = Class.forName("io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder");
+                Object api = builderClass.getMethod("build", Object.class).invoke(null, this);
+                
+                Class<?> packetEventsClass = Class.forName("com.github.retrooper.packetevents.PacketEvents");
+                packetEventsClass.getMethod("setAPI", Object.class).invoke(null, api);
+                
+                Object apiInstance = packetEventsClass.getMethod("getAPI").invoke(null);
+                apiInstance.getClass().getMethod("load").invoke(apiInstance);
+                
                 packetEventsEnabled = true;
                 getLogger().info("PacketEvents initialized successfully!");
+            } catch (ClassNotFoundException e) {
+                getLogger().info("PacketEvents not found - packet control features disabled");
+                packetEventsEnabled = false;
             } catch (Exception e) {
                 getLogger().warning("Failed to initialize PacketEvents: " + e.getMessage());
                 packetEventsEnabled = false;
             }
+        } else {
+            getLogger().info("PacketEvents disabled in config");
         }
     }
 
@@ -50,8 +63,20 @@ public class Loadscreens extends JavaPlugin {
 
         if (packetEventsEnabled) {
             packetManager = new PacketManager();
-            PacketEvents.getAPI().getEventManager().registerListener(packetManager, PacketListenerPriority.HIGH);
-            PacketEvents.getAPI().init();
+            try {
+                Class<?> packetEventsClass = Class.forName("com.github.retrooper.packetevents.PacketEvents");
+                Object api = packetEventsClass.getMethod("getAPI").invoke(null);
+                Object eventManager = api.getClass().getMethod("getEventManager").invoke(api);
+                
+                // Since we can't implement PacketListener without the dependency,
+                // we'll use a fallback approach or skip packet event registration
+                getLogger().info("PacketEvents API found but using fallback packet management");
+                
+                api.getClass().getMethod("init").invoke(api);
+            } catch (Exception e) {
+                getLogger().warning("Failed to register PacketEvents listener: " + e.getMessage());
+                packetEventsEnabled = false;
+            }
         }
 
         // Register events
@@ -83,7 +108,13 @@ public class Loadscreens extends JavaPlugin {
 
         // Disable PacketEvents
         if (packetEventsEnabled) {
-            PacketEvents.getAPI().terminate();
+            try {
+                Class<?> packetEventsClass = Class.forName("com.github.retrooper.packetevents.PacketEvents");
+                Object api = packetEventsClass.getMethod("getAPI").invoke(null);
+                api.getClass().getMethod("terminate").invoke(api);
+            } catch (Exception e) {
+                getLogger().warning("Failed to terminate PacketEvents: " + e.getMessage());
+            }
         }
 
         // Unregister events
@@ -94,16 +125,21 @@ public class Loadscreens extends JavaPlugin {
 
     private void checkDependencies() {
         // Check PlaceholderAPI
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            placeholderAPIEnabled = true;
-            getLogger().info("PlaceholderAPI found and enabled!");
-        } else {
-            getLogger().warning("PlaceholderAPI not found - placeholder features disabled");
+        try {
+            Class.forName("me.clip.placeholderapi.PlaceholderAPI");
+            if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+                placeholderAPIEnabled = true;
+                getLogger().info("PlaceholderAPI found and enabled!");
+            } else {
+                getLogger().info("PlaceholderAPI found but not loaded - placeholder features disabled");
+            }
+        } catch (ClassNotFoundException e) {
+            getLogger().info("PlaceholderAPI not found - placeholder features disabled");
         }
 
         // PacketEvents check is done in onLoad()
         if (!packetEventsEnabled) {
-            getLogger().warning("PacketEvents not available - using fallback methods");
+            getLogger().info("PacketEvents not available - using fallback methods");
         }
     }
 

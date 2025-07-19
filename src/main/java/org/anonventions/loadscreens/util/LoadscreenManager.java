@@ -1,5 +1,7 @@
-package org.anonventions.loadscreens;
+package org.anonventions.loadscreens.util;
 
+import org.anonventions.loadscreens.core.Loadscreens;
+import org.anonventions.loadscreens.depends.PlaceholderManager;
 import org.bukkit.entity.Player;
 import org.bukkit.Location;
 import org.bukkit.entity.TextDisplay;

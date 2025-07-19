@@ -1,4 +1,4 @@
-package org.anonventions.loadscreens;
+package org.anonventions.loadscreens.command;
 
 import org.anonventions.loadscreens.core.Loadscreens;
 import org.anonventions.loadscreens.util.LoadscreenManager;
@@ -200,4 +200,36 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
                     .collect(Collectors.toList());
         }
 
-        if (args.
+        if (args.length == 2) {
+            if ("test".equals(args[0].toLowerCase())) {
+                // Tab complete loadscreen types for test command
+                var config = Loadscreens.getInstance().getConfig();
+                var typesSection = config.getConfigurationSection("loadscreen_types");
+                if (typesSection != null) {
+                    return typesSection.getKeys(false).stream()
+                            .filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase()))
+                            .collect(Collectors.toList());
+                }
+            } else if ("show".equals(args[0].toLowerCase())) {
+                // Tab complete player names for show command
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        if (args.length == 3 && "show".equals(args[0].toLowerCase())) {
+            // Tab complete loadscreen types for show command
+            var config = Loadscreens.getInstance().getConfig();
+            var typesSection = config.getConfigurationSection("loadscreen_types");
+            if (typesSection != null) {
+                return typesSection.getKeys(false).stream()
+                        .filter(s -> s.toLowerCase().startsWith(args[2].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        return null;
+    }
+}

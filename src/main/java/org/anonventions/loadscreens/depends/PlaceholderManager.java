@@ -1,6 +1,6 @@
-package org.anonventions.loadscreens;
+package org.anonventions.loadscreens.depends;
 
-import me.clip.placeholderapi.PlaceholderAPI;
+import org.anonventions.loadscreens.core.Loadscreens;
 import org.bukkit.entity.Player;
 import org.bukkit.ChatColor;
 
@@ -50,16 +50,18 @@ public class PlaceholderManager {
                 }
             }
 
-            // Parse and cache
+            // Parse and cache using reflection to avoid compile-time dependency
             try {
-                String parsed = PlaceholderAPI.setPlaceholders(player, text);
-                parsed = ChatColor.translateAlternateColorCodes('&', parsed);
+                Class<?> placeholderAPIClass = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
+                Object parsed = placeholderAPIClass.getMethod("setPlaceholders", Player.class, String.class)
+                        .invoke(null, player, text);
+                String parsedText = ChatColor.translateAlternateColorCodes('&', (String) parsed);
 
                 // Cache the result
                 placeholderCache.put(cacheKey, System.currentTimeMillis());
-                cachedValues.put(cacheKey, parsed);
+                cachedValues.put(cacheKey, parsedText);
 
-                return parsed;
+                return parsedText;
             } catch (Exception e) {
                 Loadscreens.getInstance().getLogger().warning("Failed to parse placeholders: " + e.getMessage());
             }

@@ -1,0 +1,263 @@
+# =============================================================================
+# Loadscreens Plugin Configuration
+# Version: 3.0 Ultimate Edition
+# =============================================================================
+
+# Global plugin settings
+global:
+  # Enable/disable the plugin entirely
+  enabled: true
+  
+  # Enable debug mode for detailed logging
+  debug: false
+  
+  # Maximum number of concurrent loadscreen sessions
+  max_concurrent_sessions: 50
+  
+  # Use PacketEvents for advanced packet control
+  use_packetevents: true
+
+# Loadscreen type definitions
+loadscreen_types:
+  # Join loadscreen - shown when players join the server
+  join:
+    enabled: true
+    show_on_join: true
+    
+    # Animation frames (supports color codes with &)
+    frames:
+      - "&bLoading..."
+      - "&bLoading.  "
+      - "&bLoading.. "
+      - "&bLoading..."
+      - "&bWelcome to &e%player_name%&b!"
+    
+    # Timing settings (in ticks, 20 ticks = 1 second)
+    frame_interval: 10
+    duration: 100
+    timer_delay: 0
+    
+    # Fade effects
+    fade_in_duration: 10
+    fade_out_duration: 10
+    
+    # Display settings
+    scale: 1.0
+    x_offset: 0.0
+    y_offset: 1.5
+    z_offset: 2.5
+    opacity: 255
+    brightness: 15
+    font: "minecraft:default"
+    billboard: "CENTER"
+    
+    # Visual effects
+    pulse_effect: true
+    pulse_intensity: 0.2
+    pulse_speed: 0.1
+    wobble_effect: false
+    wobble_intensity: 0.1
+    wobble_speed: 0.2
+    rainbow_text: false
+    rainbow_speed: 0.05
+    typewriter_effect: false
+    typewriter_speed: 2
+    
+    # Advanced settings
+    rotation_x: 0.0
+    rotation_y: 0.0
+    rotation_z: 0.0
+    allow_negative_scale: true
+    glow_color_override: false
+    glow_color_red: 255
+    glow_color_green: 255
+    glow_color_blue: 255
+    glow_color_alpha: 255
+    
+    # Player restrictions
+    freeze_player: false
+    hide_ui: false
+    hide_chat: false
+    prevent_interaction: false
+    block_packets: false
+    
+    # Permissions and conditions
+    require_permission: false
+    permission_node: "loadscreens.view"
+    first_join_only: false
+    cooldown_seconds: 0
+    
+    # Sound settings
+    play_sound: true
+    sound_name: "BLOCK_NOTE_BLOCK_PLING"
+    sound_volume: 0.5
+    sound_pitch: 1.0
+    sound_per_frame: false
+
+  # Leave loadscreen - shown when players leave (to nearby players)
+  leave:
+    enabled: false
+    show_to_others: false
+    show_range: 50.0
+    
+    frames:
+      - "&c%player_name% left the server"
+      - "&7Goodbye!"
+    
+    frame_interval: 15
+    duration: 60
+    timer_delay: 0
+    
+    fade_in_duration: 5
+    fade_out_duration: 15
+    
+    scale: 0.8
+    x_offset: 0.0
+    y_offset: 1.0
+    z_offset: 2.0
+    opacity: 200
+    brightness: 12
+    font: "minecraft:default"
+    billboard: "CENTER"
+    
+    pulse_effect: false
+    wobble_effect: false
+    rainbow_text: false
+    typewriter_effect: false
+    
+    freeze_player: false
+    hide_ui: false
+    prevent_interaction: false
+    block_packets: false
+    
+    require_permission: false
+    permission_node: "loadscreens.view"
+    cooldown_seconds: 5
+    
+    play_sound: false
+
+  # World change loadscreen
+  world_change:
+    enabled: false
+    show_on_world_change: false
+    show_on_teleport: false
+    min_teleport_distance: 100.0
+    
+    frames:
+      - "&eChanging worlds..."
+      - "&eLoading new area..."
+      - "&aWelcome to &b%player_world%&a!"
+    
+    frame_interval: 12
+    duration: 80
+    timer_delay: 5
+    
+    fade_in_duration: 8
+    fade_out_duration: 12
+    
+    scale: 1.1
+    x_offset: 0.0
+    y_offset: 1.8
+    z_offset: 3.0
+    opacity: 255
+    brightness: 15
+    font: "minecraft:default"
+    billboard: "CENTER"
+    
+    pulse_effect: true
+    pulse_intensity: 0.15
+    pulse_speed: 0.08
+    wobble_effect: false
+    rainbow_text: false
+    typewriter_effect: true
+    typewriter_speed: 3
+    
+    freeze_player: true
+    hide_ui: false
+    prevent_interaction: true
+    block_packets: true
+    
+    require_permission: false
+    permission_node: "loadscreens.view"
+    cooldown_seconds: 10
+    
+    play_sound: true
+    sound_name: "ENTITY_ENDERMAN_TELEPORT"
+    sound_volume: 0.3
+    sound_pitch: 1.2
+
+  # Respawn loadscreen
+  respawn:
+    enabled: false
+    show_on_respawn: false
+    
+    frames:
+      - "&cRespawning..."
+      - "&eGetting back up..."
+      - "&aReady to continue!"
+    
+    frame_interval: 8
+    duration: 60
+    timer_delay: 0
+    
+    fade_in_duration: 5
+    fade_out_duration: 10
+    
+    scale: 0.9
+    x_offset: 0.0
+    y_offset: 1.2
+    z_offset: 2.2
+    opacity: 255
+    brightness: 15
+    font: "minecraft:default"
+    billboard: "CENTER"
+    
+    pulse_effect: true
+    pulse_intensity: 0.25
+    pulse_speed: 0.12
+    wobble_effect: false
+    rainbow_text: false
+    typewriter_effect: false
+    
+    freeze_player: false
+    hide_ui: false
+    prevent_interaction: false
+    block_packets: false
+    
+    require_permission: false
+    permission_node: "loadscreens.view"
+    cooldown_seconds: 0
+    
+    play_sound: true
+    sound_name: "ENTITY_PLAYER_LEVELUP"
+    sound_volume: 0.4
+    sound_pitch: 0.8
+
+# Packet control settings (requires PacketEvents)
+packet_settings:
+  # Block player movement packets during loadscreens
+  block_movement_packets: true
+  
+  # Block interaction packets (block placing, breaking, entity interaction)
+  block_interaction_packets: true
+  
+  # Block inventory-related packets
+  block_inventory_packets: true
+  
+  # Block chat messages
+  block_chat_packets: true
+  
+  # Block command execution (admins can still use /loadscreen commands)
+  block_command_packets: false
+
+# Placeholder settings (requires PlaceholderAPI)
+placeholders:
+  # Cache duration for placeholder values (in ticks)
+  cache_duration: 100
+  
+  # Custom placeholder definitions
+  custom_placeholders:
+    "%server_name%": "&bAwesome Server"
+    "%server_ip%": "play.example.com"
+    "%website%": "www.example.com"
+    "%discord%": "discord.gg/example"
