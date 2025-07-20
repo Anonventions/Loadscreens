@@ -117,6 +117,18 @@ public class LoadscreenManager {
         }
     }
 
+    public static void cleanupPlayerData(Player player) {
+        // Remove active session
+        stopLoadscreen(player);
+
+        // Remove cooldown data to prevent interference on rejoin
+        lastLoadscreen.remove(player.getUniqueId());
+
+        if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
+            Loadscreens.getInstance().getLogger().info("Cleaned up all data for " + player.getName());
+        }
+    }
+
     public static void stopAllLoadscreens() {
         for (LoadscreenSession session : activeSessions.values()) {
             session.stop();
@@ -176,6 +188,11 @@ public class LoadscreenManager {
         private List<String> parsedFrames;
         private Location originalLocation;
         private float originalYaw, originalPitch;
+
+        // Store original player state for proper restoration
+        private org.bukkit.GameMode originalGameMode;
+        private float originalWalkSpeed, originalFlySpeed;
+        private boolean originalAllowFlight;
 
         public LoadscreenSession(Player player, org.bukkit.configuration.file.FileConfiguration config, String type, String basePath) {
             this.player = player;
@@ -268,6 +285,18 @@ public class LoadscreenManager {
             originalYaw = player.getLocation().getYaw();
             originalPitch = player.getLocation().getPitch();
 
+            // Store original player state for proper restoration
+            originalGameMode = player.getGameMode();
+            originalWalkSpeed = player.getWalkSpeed();
+            originalFlySpeed = player.getFlySpeed();
+            originalAllowFlight = player.getAllowFlight();
+
+            if (debug) {
+                Loadscreens.getInstance().getLogger().info("Stored original state for " + player.getName() +
+                    " - GameMode: " + originalGameMode + ", WalkSpeed: " + originalWalkSpeed +
+                    ", FlySpeed: " + originalFlySpeed + ", AllowFlight: " + originalAllowFlight);
+            }
+
             // Only change look direction if specified in config, don't teleport to find "safe" location
             if (lookYaw != 0.0 || lookPitch != 0.0) {
                 Location lookLoc = player.getLocation().clone();
@@ -329,8 +358,10 @@ public class LoadscreenManager {
         }
 
         private void startPositionLock() {
-            // Always run EXTREMELY aggressive rotation locking during loadscreen
+            // Run position locking with reasonable frequency and tolerance
             positionLockTask = new BukkitRunnable() {
+                private int tickCounter = 0;
+
                 @Override
                 public void run() {
                     if (!LoadscreenManager.hasActiveLoadscreen(player) || !player.isOnline()) {
@@ -338,13 +369,20 @@ public class LoadscreenManager {
                         return;
                     }
 
+                    // Only check every 2 ticks (10 times per second) instead of every tick
+                    tickCounter++;
+                    if (tickCounter % 2 != 0) {
+                        return;
+                    }
+
                     Location currentLoc = player.getLocation();
 
-                    // ZERO TOLERANCE rotation checking - ANY change gets blocked
+                    // Use reasonable tolerance to prevent micro-corrections
                     boolean needsCorrection = false;
+                    double rotationTolerance = 0.5; // Allow small movements before correcting
 
-                    if (Math.abs(currentLoc.getYaw() - originalYaw) > 0.001 ||
-                            Math.abs(currentLoc.getPitch() - originalPitch) > 0.001) {
+                    if (Math.abs(currentLoc.getYaw() - originalYaw) > rotationTolerance ||
+                            Math.abs(currentLoc.getPitch() - originalPitch) > rotationTolerance) {
                         needsCorrection = true;
                     }
 
@@ -354,32 +392,20 @@ public class LoadscreenManager {
                         lockLocation.setYaw(originalYaw);
                         lockLocation.setPitch(originalPitch);
 
-                        // Force teleport immediately - no delays
+                        // Force teleport immediately
                         player.teleport(lockLocation);
 
-                        // Also force the exact rotation again to be absolutely sure
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                if (player.isOnline()) {
-                                    Location doubleLock = originalLocation.clone();
-                                    doubleLock.setYaw(originalYaw);
-                                    doubleLock.setPitch(originalPitch);
-                                    player.teleport(doubleLock);
-                                }
-                            }
-                        }.runTaskLater(Loadscreens.getInstance(), 1L);
-
-                        if (debug) {
-                            Loadscreens.getInstance().getLogger().info("BLOCKED mouse movement for " + player.getName() +
-                                " - Current Yaw: " + currentLoc.getYaw() + " Target: " + originalYaw +
-                                " - Current Pitch: " + currentLoc.getPitch() + " Target: " + originalPitch);
+                        // Rate-limited debug logging (only once every 40 ticks = 2 seconds)
+                        if (debug && tickCounter % 40 == 0) {
+                            Loadscreens.getInstance().getLogger().info("Position lock correction for " + player.getName() +
+                                    " - Target Yaw: " + originalYaw + ", Target Pitch: " + originalPitch);
                         }
                     }
                 }
             };
-            positionLockTask.runTaskTimer(Loadscreens.getInstance(), 0L, 1L); // Every single tick
+            positionLockTask.runTaskTimer(Loadscreens.getInstance(), 0L, 1L);
         }
+
         // Helper to create display in front of player's current view
         private void createDisplayInFrontOfPlayer() {
             Location base = player.getLocation();
@@ -417,6 +443,9 @@ public class LoadscreenManager {
                 e.setShadowed(false);
                 e.setLineWidth(400);
                 e.setDefaultBackground(false);
+
+                // BRIGHTNESS FIX: Apply brightness setting to the display
+                e.setBrightness(new org.bukkit.entity.Display.Brightness(brightness, brightness));
 
                 // Set initial opacity for fade in
                 byte initialOpacity = (byte) (fadeInDuration > 0 ? fadeInOpacityStart : opacity);
@@ -588,20 +617,43 @@ public class LoadscreenManager {
         }
 
         private void restorePlayerState() {
-            // Remove ALL potion effects
+            // FIRST: Restore player position to prevent ground-clipping
+            if (originalLocation != null && player.isOnline()) {
+                // Find a safe location near the original position
+                Location safeLocation = findSafeLocation(originalLocation);
+
+                // Restore original rotation
+                safeLocation.setYaw(originalYaw);
+                safeLocation.setPitch(originalPitch);
+
+                // Teleport player to safe location
+                player.teleport(safeLocation);
+
+                if (debug) {
+                    Loadscreens.getInstance().getLogger().info("Restored " + player.getName() +
+                            " to safe location: " + safeLocation.getBlockX() + ", " + safeLocation.getBlockY() +
+                            ", " + safeLocation.getBlockZ());
+                }
+            }
+
+            // Remove ALL potion effects that might have been applied
             player.removePotionEffect(PotionEffectType.SLOWNESS);
             player.removePotionEffect(PotionEffectType.JUMP_BOOST);
             player.removePotionEffect(PotionEffectType.INVISIBILITY);
             player.removePotionEffect(PotionEffectType.BLINDNESS);
 
-            // Restore default speeds
-            player.setWalkSpeed(0.2f);
-            player.setFlySpeed(0.1f);
-            player.setAllowFlight(true);
+            // Restore original player state instead of hardcoded values
+            if (originalGameMode != null) {
+                player.setGameMode(originalGameMode);
+            }
+            player.setWalkSpeed(originalWalkSpeed);
+            player.setFlySpeed(originalFlySpeed);
+            player.setAllowFlight(originalAllowFlight);
 
-            // Restore gamemode to SURVIVAL if in spectator
-            if (player.getGameMode() == org.bukkit.GameMode.SPECTATOR) {
-                player.setGameMode(org.bukkit.GameMode.SURVIVAL);
+            if (debug) {
+                Loadscreens.getInstance().getLogger().info("Restored original state for " + player.getName() +
+                    " - GameMode: " + originalGameMode + ", WalkSpeed: " + originalWalkSpeed +
+                    ", FlySpeed: " + originalFlySpeed + ", AllowFlight: " + originalAllowFlight);
             }
 
             // Unblock packets
@@ -609,7 +661,7 @@ public class LoadscreenManager {
                 Loadscreens.getInstance().getPacketManager().unblockPackets(player);
             }
 
-            // Clear velocity
+            // Clear velocity AFTER teleporting
             player.setVelocity(new org.bukkit.util.Vector(0, 0, 0));
         }
 
