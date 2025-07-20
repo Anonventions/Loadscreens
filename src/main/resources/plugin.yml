@@ -1,0 +1,60 @@
+name: Loadscreens
+version: '3.0'
+main: org.anonventions.loadscreens.core.Loadscreens
+api-version: '1.20'
+load: STARTUP
+authors: [ Anonventions ]
+description: Ultimate animated loading screens with PacketEvents and PlaceholderAPI support!
+website: https://github.com/Anonventions/Loadscreens
+prefix: Loadscreens
+
+depend: []
+softdepend:
+  - PlaceholderAPI
+  - PacketEvents
+
+commands:
+  loadscreen:
+    description: Loadscreen management commands
+    usage: |
+      /loadscreen <reload|test|stop|stopall|info>
+      /loadscreen test [type] - Test specific loadscreen type
+      /loadscreen show <player> <type> [delay] - Show loadscreen to player
+    permission: loadscreens.admin
+    aliases: [ls, loadscr]
+
+  leave:
+    description: Leave the server with a fancy loadscreen animation
+    usage: /leave
+    permission: loadscreens.view
+    aliases: [quit]
+
+  exit:
+    description: Exit the server with a fancy loadscreen animation
+    usage: /exit
+    permission: loadscreens.view
+
+permissions:
+  loadscreens.*:
+    description: All loadscreen permissions
+    default: op
+    children:
+      loadscreens.admin: true
+      loadscreens.view: true
+      loadscreens.api: true
+
+  loadscreens.admin:
+    description: Access to loadscreen admin commands
+    default: op
+
+  loadscreens.view:
+    description: Permission to see loadscreens
+    default: true
+
+  loadscreens.api:
+    description: Permission to use loadscreen API
+    default: op
+
+  loadscreens.bypass:
+    description: Bypass loadscreen cooldowns and restrictions
+    default: op
