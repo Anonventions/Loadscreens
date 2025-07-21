@@ -46,8 +46,9 @@ public class LoadscreenListener implements Listener {
     private void handleNormalDisconnect(Player player) {
         var config = Loadscreens.getInstance().getConfig();
 
-        // Clean up any active loadscreen (except the leave one we just started)
-        // Note: Don't stop the leave loadscreen we just started
+        // CRITICAL FIX: Use cleanupPlayerData to remove both session and cooldown data
+        // This prevents stale data from interfering when they rejoin
+        LoadscreenManager.cleanupPlayerData(player);
 
         // Show leave loadscreen to other players if enabled
         if (config.getBoolean("loadscreen_types.leave.show_to_others", false)) {
