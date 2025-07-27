@@ -1,6 +1,7 @@
 # ===== LOADSCREENS CONFIGURATION =====
 # Advanced animated loading screen system with PacketEvents
-# Version: 3.0 Ultimate Edition
+# Version: 3.1 Ultimate Edition - FULL OPACITY FIX
+# Updated: 2025-07-16 by Anonventions
 
 # === GLOBAL SETTINGS ===
 global:
@@ -33,17 +34,24 @@ loadscreen_types:
       - "ꐕ"  # load_5
       - "ꐖ"  # load_6
       - "ꐗ"  # load_7
+      - "⋱"  # load_8
 
     # Positioning & Effects
-    scale: 1.5
-    y_offset: 0.0
-    z_offset: 3.5
+    scale: 0.3
+    y_offset: 1.5
+    z_offset: 0.5
     x_offset: 0.0
     opacity: 255                   # Maximum opacity during animation
-    brightness: 15
-    look_yaw: 0.0                  # Yaw to force player to look at (0 = south, 90 = west, 180 = north, -90/270 = east)
-    look_pitch: 0.0                # Pitch to force player to look at (0 = horizontal, 90 = straight down, -90 = straight up)
+    brightness: 15                 # Maximum brightness (0-15)
+    look_yaw: 0.0                  # Yaw to force player to look at
+    look_pitch: 0.0                # Pitch to force player to look at
 
+    # Background Settings - CRITICAL FOR 100% OPACITY
+    use_background: true           # Enable background for true 100% opacity
+    background_color_red: 0        # Background color (R) - Black background
+    background_color_green: 0      # Background color (G)
+    background_color_blue: 0       # Background color (B)
+    background_color_alpha: 80     # Background transparency (0-255, 80 = subtle)
 
     # Visual Effects
     pulse_effect: false
@@ -69,10 +77,10 @@ loadscreen_types:
   leave:
     enabled: true
     timer_delay: 0                # Immediate
-    duration: 40                  # Shorter duration
-    frame_interval: 2
-    fade_in_duration: 10
-    fade_out_duration: 10
+    duration: 30                  # Shorter duration
+    frame_interval: 4
+    fade_in_duration: 0           # No fade in for immediate effect
+    fade_out_duration: 5          # Quick fade out
     fade_in_opacity_start: 0
     fade_out_opacity_end: 0
     fade_smooth: true
@@ -85,16 +93,21 @@ loadscreen_types:
       - "ꐣ"  # leave_5
       - "ꐤ"  # leave_6
 
-
-    scale: 3
-    y_offset: 0.0
-    z_offset: 3.5
+    scale: 0.3
+    y_offset: 1.5
+    z_offset: 0.5
     x_offset: 0.0
     opacity: 255                   # Maximum opacity during animation
-    brightness: 15
-    look_yaw: 0.8                  # Yaw to force player to look at (0 = south, 90 = west, 180 = north, -90/270 = east)
-    look_pitch: -4.5                # Pitch to force player to look at (0 = horizontal, 90 = straight down, -90 = straight up)
+    brightness: 15                 # Maximum brightness
+    look_yaw: 0.8                  
+    look_pitch: -4.5               
 
+    # Background Settings for Leave
+    use_background: true           # Enable background for true 100% opacity
+    background_color_red: 25       # Slightly red tinted background
+    background_color_green: 0      
+    background_color_blue: 0       
+    background_color_alpha: 70     # Subtle background
 
     rainbow_text: false
     rainbow_speed: 0.1
@@ -108,38 +121,41 @@ loadscreen_types:
     show_to_others: true
     show_range: 50.0              # Blocks range
 
-    # Leave Command Feature
-    allow_leave_command: true     # Enable /leave and /exit commands (if false, commands are disabled entirely)
-
   # World change/teleport loadscreen
   world_change:
     enabled: true
-    timer_delay: 1                # Small delay
+    timer_delay: 0                # Immediate
     duration: 60
-    frame_interval: 3
-    fade_in_duration: 15
-    fade_out_duration: 15
+    frame_interval: 4
+    fade_in_duration: 0           # No fade in for immediate effect
+    fade_out_duration: 5          # Quick fade out
     fade_in_opacity_start: 0
     fade_out_opacity_end: 0
     fade_smooth: true
     font: "minecraft:default"
     frames:
-      - "ꐥ"  # leave_1
-      - "ꐦ"  # leave_2
-      - "ꐧ"  # leave_3
-      - "ꐨ"  # leave_4
-      - "ꐩ"  # leave_5
-      - "ꐪ"  # leave_6
+      - "ꐥ"  # world_1
+      - "ꐦ"  # world_2
+      - "ꐧ"  # world_3
+      - "ꐨ"  # world_4
+      - "ꐩ"  # world_5
+      - "ꐪ"  # world_6
 
-    scale: 3
-    y_offset: 0.0
-    z_offset: 3.5
+    scale: 0.3
+    y_offset: 1.5
+    z_offset: 0.5
     x_offset: 0.0
     opacity: 255                   # Maximum opacity during animation
-    brightness: 15
-    look_yaw: 0.8                  # Yaw to force player to look at (0 = south, 90 = west, 180 = north, -90/270 = east)
-    look_pitch: -4.5                # Pitch to force player to look at (0 = horizontal, 90 = straight down, -90 = straight up)
+    brightness: 15                 # Maximum brightness
+    look_yaw: 0.8                  
+    look_pitch: -4.5               
 
+    # Background Settings for World Change
+    use_background: true           # Enable background for true 100% opacity
+    background_color_red: 0        
+    background_color_green: 0      
+    background_color_blue: 25      # Slightly blue tinted background
+    background_color_alpha: 70     # Subtle background
 
     wobble_effect: false
     wobble_intensity: 0.05
@@ -153,6 +169,7 @@ loadscreen_types:
     show_on_world_change: true
     show_on_teleport: true
     min_teleport_distance: 1    # Minimum distance to trigger
+    
   # Respawn loadscreen
   respawn:
     enabled: true
@@ -176,6 +193,12 @@ loadscreen_types:
     opacity: 255
     brightness: 15
 
+    # Background Settings for Respawn
+    use_background: true           # Enable background for true 100% opacity
+    background_color_red: 15       # Dark gray with slight red tint
+    background_color_green: 10      
+    background_color_blue: 10      
+    background_color_alpha: 100    # More visible for respawn context
 
     pulse_effect: true
     pulse_intensity: 0.3
@@ -211,6 +234,12 @@ loadscreen_types:
     opacity: 255
     brightness: 15
 
+    # Background Settings for Custom
+    use_background: true           # Enable background for true 100% opacity
+    background_color_red: 0        
+    background_color_green: 15     # Slightly green tinted background
+    background_color_blue: 0       
+    background_color_alpha: 90     # Medium visibility
 
     rainbow_text: true
     typewriter_effect: true
@@ -221,37 +250,59 @@ loadscreen_types:
     sound_volume: 0.5
     sound_pitch: 1.0
 
-# === PACKET EVENTS SETTINGS ===
+# === PACKET EVENTS SETTINGS - OPTIMIZED ===
 packet_settings:
-  # NUCLEAR MOVEMENT BLOCKING
+  # OPTIMIZED MOVEMENT BLOCKING
   block_movement_packets: true        # Block ALL movement packets
   prevent_head_movement: true         # STRICT head movement prevention
-  lock_position: true                 # Lock position with teleportation
-  rotation_lock_threshold: 0.01       # How precise rotation lock should be
+  lock_position: true                 # Lock position with optimized teleportation
+  rotation_lock_threshold: 1.0        # More lenient threshold to prevent constant correction
+  position_check_interval: 10         # Check position every 10 ticks instead of every tick
+  packet_block_cooldown: 50           # Milliseconds between packet blocks to prevent timeout
 
-  # COMPLETE UI BLOCKING
+  # SELECTIVE UI BLOCKING
   hide_hotbar: true
   hide_experience: true
   hide_health: true
-  hide_food: true
-  hide_armor: true
+  hide_food: false                    # Allow food to prevent confusion
+  hide_armor: false                   # Allow armor display
   hide_air: true
   hide_mount_health: true
   hide_crosshair: true
   hide_actionbar: true
   hide_boss_bar: true
   hide_scoreboard: true
-  hide_tab_list: true
-  hide_chat: true
+  hide_tab_list: false                # Allow tab list for server info
+  hide_chat: false                    # Allow chat to prevent isolation
 
-  # NUCLEAR OPTIONS
-  block_all_input: true              # Block ALL player input
+  # OPTIMIZED OPTIONS
+  block_all_input: false              # Allow some input to prevent timeout
   make_invisible: true               # Make player completely invisible
   use_spectator_mode: true           # Use spectator mode for UI hiding
-  strict_packet_blocking: true       # Block ALL packets except admin commands
+  strict_packet_blocking: false       # Less strict to prevent timeouts
+  allow_admin_commands: true          # Always allow admin commands
 
   # BLINDNESS EFFECT
-  apply_blindness_effect: true     # Apply blindness effect to player
+  apply_blindness_effect: false        # Disabled blindness to prevent conflicts
+
+# === DISPLAY OPTIMIZATION ===
+display_settings:
+  # OPACITY AND BRIGHTNESS FIXES
+  force_max_opacity: true             # Force maximum opacity during main animation
+  force_max_brightness: true          # Force maximum brightness always
+  opacity_check_interval: 20          # Check opacity every 20 ticks
+  brightness_override: true           # Override any brightness reductions
+  background_enabled_by_default: true # Enable background by default for better opacity
+  
+  # FADE IMPROVEMENTS
+  fade_precision: 0.1                 # Fade precision for smoother transitions
+  maintain_peak_opacity: true         # Maintain peak opacity between fades
+  brightness_during_fade: true        # Maintain brightness during fades
+  
+  # BACKGROUND OPTIMIZATION
+  auto_background_color: true         # Automatically adjust background colors
+  background_alpha_minimum: 50       # Minimum background alpha for visibility
+  background_alpha_maximum: 150      # Maximum background alpha to avoid distraction
 
 # === PLACEHOLDER SETTINGS ===
 placeholders:
@@ -264,13 +315,24 @@ placeholders:
     "%custom_message_2%": "§bYou can customize this!"
     "%custom_message_3%": "§aEnjoy the loadscreen!"
 
-# === PERFORMANCE SETTINGS ===
+# === PERFORMANCE SETTINGS - OPTIMIZED ===
 performance:
   max_view_distance: 2.0
   cleanup_on_disconnect: true
   async_placeholder_parsing: true
   cache_parsed_frames: true
   max_cache_size: 1000
+  
+  # TIMEOUT PREVENTION
+  connection_health_check: true       # Monitor connection health
+  max_packet_blocks_per_second: 20    # Limit packet blocks to prevent timeout
+  position_lock_optimization: true    # Use optimized position locking
+  gentle_teleportation: true          # Use gentler teleportation to prevent desync
+  
+  # DISPLAY PERFORMANCE
+  text_display_optimization: true     # Optimize TextDisplay entity performance
+  background_rendering_cache: true    # Cache background rendering for performance
+  opacity_calculation_cache: true     # Cache opacity calculations
 
 # === COMPATIBILITY ===
 compatibility:
@@ -279,3 +341,26 @@ compatibility:
     - "PacketEvents"
   fallback_mode: true             # Fallback if dependencies missing
   legacy_support: false           # Support older MC versions
+  timeout_prevention: true        # Enable timeout prevention measures
+  minecraft_version_check: true   # Check Minecraft version compatibility
+  
+  # DISPLAY COMPATIBILITY
+  textdisplay_api_version: "1.20"  # TextDisplay API version requirement
+  background_support_check: true   # Check if background is supported
+
+# === ADVANCED SETTINGS ===
+advanced:
+  # DEBUGGING
+  log_opacity_changes: false        # Log all opacity changes (performance impact)
+  log_background_changes: false     # Log background color changes
+  log_fade_calculations: false      # Log fade effect calculations
+  
+  # EXPERIMENTAL
+  experimental_features: false      # Enable experimental features
+  high_precision_opacity: true      # Use high precision opacity calculations
+  background_color_interpolation: false  # Smooth background color transitions
+  
+  # SECURITY
+  validate_player_state: true       # Validate player state before applying effects
+  prevent_exploit_attempts: true    # Prevent potential exploits
+  safe_mode_fallback: true         # Enable safe mode if issues detected
