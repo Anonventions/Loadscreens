@@ -1,0 +1,16 @@
+# Canvas Animation Creator Dependencies
+# Required packages for the Loadscreens animation creator tool
+
+# Core image processing
+Pillow>=10.0.0
+
+# YAML processing for plugin configuration
+PyYAML>=6.0
+
+# Additional utilities
+numpy>=1.24.0
+
+# Development and testing (optional)
+# pytest>=7.0.0
+# black>=23.0.0
+# flake8>=6.0.0
