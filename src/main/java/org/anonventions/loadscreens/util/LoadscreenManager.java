@@ -162,6 +162,11 @@ public class LoadscreenManager {
         private final boolean makeInvisible, lockPosition;
         private final String font;
 
+        // Background settings for shader compatibility
+        private final boolean useBackground;
+        private final int backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha;
+        private final boolean forceMaxOpacity, forceMaxBrightness;
+
         // Visual effects
         private final boolean pulseEffect, wobbleEffect, rainbowText, typewriterEffect;
         private final double pulseIntensity, pulseSpeed, wobbleIntensity, wobbleSpeed, rainbowSpeed;
@@ -272,6 +277,15 @@ public class LoadscreenManager {
             // New fields for look direction
             this.lookYaw = config.getDouble(basePath + "look_yaw", 0.0);
             this.lookPitch = config.getDouble(basePath + "look_pitch", 0.0);
+
+            // Background settings for shader compatibility
+            this.useBackground = config.getBoolean(basePath + "use_background", true);
+            this.backgroundColorRed = Math.max(0, Math.min(255, config.getInt(basePath + "background_color_red", 0)));
+            this.backgroundColorGreen = Math.max(0, Math.min(255, config.getInt(basePath + "background_color_green", 0)));
+            this.backgroundColorBlue = Math.max(0, Math.min(255, config.getInt(basePath + "background_color_blue", 0)));
+            this.backgroundColorAlpha = Math.max(0, Math.min(255, config.getInt(basePath + "background_color_alpha", 80)));
+            this.forceMaxOpacity = config.getBoolean("display_settings.force_max_opacity", true);
+            this.forceMaxBrightness = config.getBoolean("display_settings.force_max_brightness", true);
         }
 
         public void start() {
@@ -358,7 +372,7 @@ public class LoadscreenManager {
         }
 
         private void startPositionLock() {
-            // Run position locking with reasonable frequency and tolerance
+            // TIMEOUT FIX: Run position locking with much lower frequency and higher tolerance
             positionLockTask = new BukkitRunnable() {
                 private int tickCounter = 0;
 
@@ -369,18 +383,25 @@ public class LoadscreenManager {
                         return;
                     }
 
-                    // Only check every 2 ticks (10 times per second) instead of every tick
+                    // TIMEOUT FIX: Only check every 10 ticks (2 times per second) instead of every tick
                     tickCounter++;
-                    if (tickCounter % 2 != 0) {
+                    if (tickCounter % 10 != 0) {
                         return;
                     }
 
                     Location currentLoc = player.getLocation();
 
-                    // Use reasonable tolerance to prevent micro-corrections
+                    // TIMEOUT FIX: Use higher tolerance to prevent constant micro-corrections
                     boolean needsCorrection = false;
-                    double rotationTolerance = 0.5; // Allow small movements before correcting
+                    double rotationTolerance = 5.0; // Increased from 0.5 to 5.0 degrees
+                    double positionTolerance = 0.5; // Allow some position drift
 
+                    // Check position drift (allow small movements)
+                    if (originalLocation.distance(currentLoc) > positionTolerance) {
+                        needsCorrection = true;
+                    }
+
+                    // Check rotation drift (much more lenient)
                     if (Math.abs(currentLoc.getYaw() - originalYaw) > rotationTolerance ||
                             Math.abs(currentLoc.getPitch() - originalPitch) > rotationTolerance) {
                         needsCorrection = true;
@@ -392,18 +413,20 @@ public class LoadscreenManager {
                         lockLocation.setYaw(originalYaw);
                         lockLocation.setPitch(originalPitch);
 
-                        // Force teleport immediately
+                        // TIMEOUT FIX: Use gentler teleportation method
                         player.teleport(lockLocation);
 
-                        // Rate-limited debug logging (only once every 40 ticks = 2 seconds)
-                        if (debug && tickCounter % 40 == 0) {
-                            Loadscreens.getInstance().getLogger().info("Position lock correction for " + player.getName() +
-                                    " - Target Yaw: " + originalYaw + ", Target Pitch: " + originalPitch);
+                        // Rate-limited debug logging (only once every 100 ticks = 5 seconds)
+                        if (debug && tickCounter % 100 == 0) {
+                            Loadscreens.getInstance().getLogger().info("GENTLE position lock correction for " + player.getName() +
+                                    " - Target Yaw: " + originalYaw + ", Target Pitch: " + originalPitch +
+                                    " (tolerance: " + rotationTolerance + " degrees)");
                         }
                     }
                 }
             };
-            positionLockTask.runTaskTimer(Loadscreens.getInstance(), 0L, 1L);
+            // TIMEOUT FIX: Run every 5 ticks instead of every tick to reduce load
+            positionLockTask.runTaskTimer(Loadscreens.getInstance(), 0L, 5L);
         }
 
         // Helper to create display in front of player's current view
@@ -442,13 +465,33 @@ public class LoadscreenManager {
                 e.setSeeThrough(!preventInteraction);
                 e.setShadowed(false);
                 e.setLineWidth(400);
-                e.setDefaultBackground(false);
+                
+                // CRITICAL SHADER COMPATIBILITY FIX: Force background for full opacity
+                if (useBackground) {
+                    e.setDefaultBackground(true);
+                    // Set background color for shader compatibility
+                    e.setBackgroundColor(org.bukkit.Color.fromARGB(
+                        backgroundColorAlpha, 
+                        backgroundColorRed, 
+                        backgroundColorGreen, 
+                        backgroundColorBlue
+                    ));
+                } else {
+                    e.setDefaultBackground(false);
+                }
 
-                // BRIGHTNESS FIX: Apply brightness setting to the display
-                e.setBrightness(new org.bukkit.entity.Display.Brightness(brightness, brightness));
+                // BRIGHTNESS FIX: Always apply maximum brightness when forced
+                int finalBrightness = forceMaxBrightness ? 15 : brightness;
+                e.setBrightness(new org.bukkit.entity.Display.Brightness(finalBrightness, finalBrightness));
 
-                // Set initial opacity for fade in
-                byte initialOpacity = (byte) (fadeInDuration > 0 ? fadeInOpacityStart : opacity);
+                // OPACITY FIX: Set initial opacity with shader considerations  
+                byte initialOpacity;
+                if (forceMaxOpacity && fadeInDuration == 0) {
+                    // Force full opacity immediately when no fade-in
+                    initialOpacity = (byte) 255;
+                } else {
+                    initialOpacity = (byte) (fadeInDuration > 0 ? fadeInOpacityStart : opacity);
+                }
                 e.setTextOpacity(initialOpacity);
 
                 // Set glow color if overridden
@@ -541,7 +584,10 @@ public class LoadscreenManager {
 
         private void applyFadeEffects(int totalTicks) {
             if (!fadeSmooth || display == null) return;
+            
             int currentOpacity = opacity;
+            
+            // Calculate fade effects
             if (totalTicks < fadeInDuration) {
                 if (fadeSmooth) {
                     double fadeProgress = (double) totalTicks / fadeInDuration;
@@ -553,11 +599,25 @@ public class LoadscreenManager {
                     double fadeProgress = (double) (totalTicks - fadeOutStart) / fadeOutDuration;
                     currentOpacity = (int) (opacity - (opacity - fadeOutOpacityEnd) * fadeProgress);
                 }
+            } else if (forceMaxOpacity) {
+                // CRITICAL FIX: Force maximum opacity during main animation phase for shader compatibility
+                currentOpacity = 255;
             }
+            
+            // Clamp opacity values
             currentOpacity = Math.max(0, Math.min(255, currentOpacity));
+            
+            // Apply opacity to display
             display.setTextOpacity((byte) currentOpacity);
+            
+            // SHADER COMPATIBILITY: Also ensure brightness remains at maximum during main phase
+            if (forceMaxBrightness && totalTicks >= fadeInDuration && totalTicks < duration - fadeOutDuration) {
+                display.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
+            }
+            
             if (debug && totalTicks % 20 == 0) {
-                Loadscreens.getInstance().getLogger().info("Fade opacity for " + player.getName() + ": " + currentOpacity);
+                Loadscreens.getInstance().getLogger().info("Fade opacity for " + player.getName() + ": " + currentOpacity + 
+                    " (force max: " + forceMaxOpacity + ", shader compat: " + useBackground + ")");
             }
         }
 
