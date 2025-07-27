@@ -250,17 +250,18 @@ loadscreen_types:
     sound_volume: 0.5
     sound_pitch: 1.0
 
-# === PACKET EVENTS SETTINGS - OPTIMIZED ===
+# === PACKET EVENTS SETTINGS - TIMEOUT PREVENTION OPTIMIZED ===
 packet_settings:
-  # OPTIMIZED MOVEMENT BLOCKING
-  block_movement_packets: true        # Block ALL movement packets
-  prevent_head_movement: true         # STRICT head movement prevention
+  # OPTIMIZED MOVEMENT BLOCKING TO PREVENT TIMEOUTS
+  block_movement_packets: true        # Block selective movement packets only
+  prevent_head_movement: false        # Disabled to prevent timeout
   lock_position: true                 # Lock position with optimized teleportation
-  rotation_lock_threshold: 1.0        # More lenient threshold to prevent constant correction
-  position_check_interval: 10         # Check position every 10 ticks instead of every tick
+  rotation_lock_threshold: 5.0        # Higher threshold to prevent constant correction (was 1.0)
+  position_check_interval: 50         # Check position every 50 ticks instead of every 10 ticks
   packet_block_cooldown: 50           # Milliseconds between packet blocks to prevent timeout
+  max_packet_blocks_per_second: 20    # NEW: Limit packet blocks to prevent timeout
 
-  # SELECTIVE UI BLOCKING
+  # SELECTIVE UI BLOCKING TO PREVENT TIMEOUTS
   hide_hotbar: true
   hide_experience: true
   hide_health: true
@@ -275,15 +276,17 @@ packet_settings:
   hide_tab_list: false                # Allow tab list for server info
   hide_chat: false                    # Allow chat to prevent isolation
 
-  # OPTIMIZED OPTIONS
+  # TIMEOUT PREVENTION OPTIONS
   block_all_input: false              # Allow some input to prevent timeout
   make_invisible: true               # Make player completely invisible
-  use_spectator_mode: true           # Use spectator mode for UI hiding
+  use_spectator_mode: false           # CHANGED: Use adventure mode instead to prevent timeout
+  use_adventure_mode: true            # NEW: Use adventure mode for safer restrictions
   strict_packet_blocking: false       # Less strict to prevent timeouts
   allow_admin_commands: true          # Always allow admin commands
+  gentle_player_restrictions: true    # NEW: Use gentler restrictions to prevent timeout
 
-  # BLINDNESS EFFECT
-  apply_blindness_effect: false        # Disabled blindness to prevent conflicts
+  # BLINDNESS EFFECT - DISABLED TO PREVENT TIMEOUT
+  apply_blindness_effect: false        # Disabled blindness to prevent conflicts and timeouts
 
 # === DISPLAY OPTIMIZATION ===
 display_settings:
@@ -315,7 +318,7 @@ placeholders:
     "%custom_message_2%": "§bYou can customize this!"
     "%custom_message_3%": "§aEnjoy the loadscreen!"
 
-# === PERFORMANCE SETTINGS - OPTIMIZED ===
+# === PERFORMANCE SETTINGS - TIMEOUT PREVENTION OPTIMIZED ===
 performance:
   max_view_distance: 2.0
   cleanup_on_disconnect: true
@@ -323,11 +326,13 @@ performance:
   cache_parsed_frames: true
   max_cache_size: 1000
   
-  # TIMEOUT PREVENTION
+  # TIMEOUT PREVENTION - ENHANCED
   connection_health_check: true       # Monitor connection health
   max_packet_blocks_per_second: 20    # Limit packet blocks to prevent timeout
   position_lock_optimization: true    # Use optimized position locking
   gentle_teleportation: true          # Use gentler teleportation to prevent desync
+  position_lock_frequency: 5          # NEW: Position lock check every 5 ticks (was 1)
+  rotation_tolerance_degrees: 5.0     # NEW: Higher rotation tolerance to prevent micro-corrections
   
   # DISPLAY PERFORMANCE
   text_display_optimization: true     # Optimize TextDisplay entity performance
