@@ -28,6 +28,12 @@ public class PacketManager implements PacketListener {
     private final Map<UUID, TextDisplay> cameraEntities = new HashMap<>(); // Track camera entities
     private final Map<UUID, BukkitRunnable> rotationLockTasks = new HashMap<>(); // Keep this for cleanup
     private final Set<UUID> playersBeingRestored = new HashSet<>(); // Track players being restored
+    
+    // Connection health monitoring to prevent timeouts
+    private final Map<UUID, Long> lastKeepAlive = new HashMap<>();
+    private final Map<UUID, Integer> packetBlockCount = new HashMap<>();
+    private final long MAX_PACKET_BLOCKS_PER_SECOND = 20; // Configurable limit
+    private final long KEEPALIVE_TIMEOUT_MS = 30000; // 30 seconds
 
     public void blockPackets(Player player) {
         UUID uuid = player.getUniqueId();
@@ -37,14 +43,18 @@ public class PacketManager implements PacketListener {
         PlayerState originalState = new PlayerState(player);
         originalStates.put(uuid, originalState);
 
-        // Apply complete lockdown
+        // Initialize connection health monitoring
+        lastKeepAlive.put(uuid, System.currentTimeMillis());
+        packetBlockCount.put(uuid, 0);
+
+        // Apply optimized lockdown (less aggressive to prevent timeouts)
         makePlayerInvisible(player);
-        hideCompleteUI(player);
-        freezePlayerCompletely(player);
-        startRotationLock(player); // NEW: Force rotation lock
+        hideSelectiveUI(player); // Less aggressive UI hiding
+        freezePlayerOptimized(player); // Optimized freezing
+        startOptimizedRotationLock(player); // Less aggressive rotation lock
 
         if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
-            Loadscreens.getInstance().getLogger().info("Applied NUCLEAR lockdown to " + player.getName());
+            Loadscreens.getInstance().getLogger().info("Applied OPTIMIZED lockdown to " + player.getName() + " (timeout prevention enabled)");
         }
     }
 
@@ -57,6 +67,10 @@ public class PacketManager implements PacketListener {
         if (rotationTask != null) {
             rotationTask.cancel();
         }
+
+        // Clean up connection monitoring
+        lastKeepAlive.remove(uuid);
+        packetBlockCount.remove(uuid);
 
         // Restore original state
         PlayerState originalState = originalStates.remove(uuid);
@@ -71,17 +85,16 @@ public class PacketManager implements PacketListener {
         }
 
         if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
-            Loadscreens.getInstance().getLogger().info("Restored " + player.getName() + " from NUCLEAR lockdown");
+            Loadscreens.getInstance().getLogger().info("Restored " + player.getName() + " from OPTIMIZED lockdown");
         }
     }
 
-    private void startRotationLock(Player player) {
-        // Get the target rotation from LoadscreenManager if active
+    private void startOptimizedRotationLock(Player player) {
+        // TIMEOUT FIX: Use much less aggressive rotation locking
         Location targetLocation = player.getLocation().clone();
 
         // Check if player has an active loadscreen session to get the exact target rotation
         if (org.anonventions.loadscreens.util.LoadscreenManager.hasActiveLoadscreen(player)) {
-            // Try to get the configured look_yaw and look_pitch from the active session
             var config = Loadscreens.getInstance().getConfig();
             float targetYaw = (float) config.getDouble("loadscreen_types.join.look_yaw", 0.0);
             float targetPitch = (float) config.getDouble("loadscreen_types.join.look_pitch", 0.0);
@@ -90,40 +103,12 @@ public class PacketManager implements PacketListener {
             targetLocation.setYaw(targetYaw);
             targetLocation.setPitch(targetPitch);
 
-            // IMPORTANT: Adjust camera position to eye level to prevent "in ground" view
-            // Player eye level is typically 1.62 blocks above their feet
-            Location cameraLocation = targetLocation.clone();
-            cameraLocation.add(0, 1.62, 0); // Add eye level offset
+            // TIMEOUT FIX: Only set position once, don't use camera entity (less aggressive)
+            player.teleport(targetLocation);
 
-            // Create a camera entity at the target location with the exact rotation
-            TextDisplay cameraEntity = player.getWorld().spawn(cameraLocation, TextDisplay.class, entity -> {
-                entity.text(net.kyori.adventure.text.Component.empty()); // Empty text
-                entity.setInvisible(true);
-                entity.setCustomNameVisible(false);
-                entity.setGlowing(false);
-                // Set the entity's rotation to our target rotation
-                entity.setRotation(targetYaw, targetPitch);
-            });
-
-            // Store the camera entity for cleanup
-            cameraEntities.put(player.getUniqueId(), cameraEntity);
-
-            // Send camera packet to make player view through the camera entity
-            try {
-                // Use PacketEvents to send the camera packet
-                com.github.retrooper.packetevents.PacketEvents.getAPI().getPlayerManager().sendPacket(player,
-                    new WrapperPlayServerCamera(cameraEntity.getEntityId()));
-
-                if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
-                    Loadscreens.getInstance().getLogger().info("Set camera lock for " + player.getName() +
-                        " to entity " + cameraEntity.getEntityId() + " at yaw: " + targetYaw + ", pitch: " + targetPitch);
-                }
-            } catch (Exception e) {
-                if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
-                    Loadscreens.getInstance().getLogger().warning("Failed to send camera packet for " + player.getName() + ": " + e.getMessage());
-                }
-                // Fallback to teleporting if camera packet fails
-                player.teleport(targetLocation);
+            if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
+                Loadscreens.getInstance().getLogger().info("Set OPTIMIZED rotation lock for " + player.getName() +
+                    " to yaw: " + targetYaw + ", pitch: " + targetPitch + " (no camera entity to prevent timeout)");
             }
         }
     }
@@ -158,42 +143,34 @@ public class PacketManager implements PacketListener {
         ));
     }
 
-    private void hideCompleteUI(Player player) {
-        // Apply blindness if enabled in config
-        if (Loadscreens.getInstance().getConfig().getBoolean("packet_settings.apply_blindness_effect", true)) {
-            player.addPotionEffect(new PotionEffect(
-                    PotionEffectType.BLINDNESS,
-                    Integer.MAX_VALUE,
-                    0,
-                    true,
-                    false,
-                    false
-            ));
-        }
-
-        // Set to spectator mode for maximum UI hiding
-        player.setGameMode(GameMode.SPECTATOR);
+    private void hideSelectiveUI(Player player) {
+        // TIMEOUT FIX: Don't apply blindness as it can cause issues with packet handling
+        // Apply only necessary effects for UI hiding without causing timeouts
+        
+        // Use adventure mode instead of spectator to reduce timeout risk
+        player.setGameMode(GameMode.ADVENTURE);
     }
 
-    private void freezePlayerCompletely(Player player) {
-        // Zero out all movement
+    private void freezePlayerOptimized(Player player) {
+        // TIMEOUT FIX: Less aggressive movement restrictions
         player.setWalkSpeed(0.0f);
         player.setFlySpeed(0.0f);
 
-        // Add extremely strong effects
+        // Apply moderate effects (not maximum intensity to prevent timeout)
         player.addPotionEffect(new PotionEffect(
                 PotionEffectType.SLOWNESS,
                 Integer.MAX_VALUE,
-                255,
+                10, // Reduced from 255 to prevent timeout
                 true,
                 false,
                 false
         ));
 
+        // Don't apply extreme jump boost as it can cause packet issues
         player.addPotionEffect(new PotionEffect(
                 PotionEffectType.JUMP_BOOST,
                 Integer.MAX_VALUE,
-                250,
+                250, // Negative jump boost to prevent jumping
                 true,
                 false,
                 false
@@ -207,21 +184,9 @@ public class PacketManager implements PacketListener {
     }
 
     private void restorePlayerState(Player player, PlayerState originalState) {
-        // Restore camera view FIRST before other restoration
-        try {
-            // Send camera packet to restore normal view (using player's own entity ID)
-            com.github.retrooper.packetevents.PacketEvents.getAPI().getPlayerManager().sendPacket(player,
-                new WrapperPlayServerCamera(player.getEntityId()));
-
-            if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
-                Loadscreens.getInstance().getLogger().info("Restored normal camera view for " + player.getName());
-            }
-        } catch (Exception e) {
-            if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
-                Loadscreens.getInstance().getLogger().warning("Failed to restore camera for " + player.getName() + ": " + e.getMessage());
-            }
-        }
-
+        // TIMEOUT FIX: Restore camera view FIRST before other restoration (no camera entity to restore now)
+        // Since we're not using camera entities anymore, just ensure normal view
+        
         // Remove ALL effects
         player.removePotionEffect(PotionEffectType.INVISIBILITY);
         player.removePotionEffect(PotionEffectType.BLINDNESS);
@@ -251,7 +216,7 @@ public class PacketManager implements PacketListener {
         player.setVelocity(new org.bukkit.util.Vector(0, 0, 0));
 
         // CRITICAL FIX: Force inventory refresh after gamemode change
-        // This fixes the invisible items issue when transitioning from spectator mode
+        // This fixes the invisible items issue when transitioning from adventure mode
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -285,6 +250,35 @@ public class PacketManager implements PacketListener {
         }.runTaskLater(Loadscreens.getInstance(), 5L); // Adjust delay as needed
     }
 
+    // Helper method to check if we should allow packet (timeout prevention)
+    private boolean shouldAllowPacket(Player player, PacketTypeCommon packetType) {
+        UUID uuid = player.getUniqueId();
+        
+        // Update last keepalive time for any packet (connection health)
+        lastKeepAlive.put(uuid, System.currentTimeMillis());
+        
+        // Check packet block rate to prevent timeout
+        int currentBlocks = packetBlockCount.getOrDefault(uuid, 0);
+        long currentTime = System.currentTimeMillis();
+        
+        // Reset counter every second
+        if (currentTime - lastKeepAlive.getOrDefault(uuid, 0L) > 1000) {
+            packetBlockCount.put(uuid, 0);
+            currentBlocks = 0;
+        }
+        
+        // If we're blocking too many packets, allow this one to prevent timeout
+        if (currentBlocks >= MAX_PACKET_BLOCKS_PER_SECOND) {
+            if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
+                Loadscreens.getInstance().getLogger().warning("Allowing packet " + packetType + 
+                    " for " + player.getName() + " to prevent timeout (blocked " + currentBlocks + " this second)");
+            }
+            return true;
+        }
+        
+        return false;
+    }
+
     @Override
     public void onPacketReceive(PacketReceiveEvent event) {
         if (!(event.getPlayer() instanceof Player)) return;
@@ -295,17 +289,20 @@ public class PacketManager implements PacketListener {
         // Continue with existing packet blocking logic for active loadscreens
         if (!blockedPlayers.contains(player.getUniqueId())) return;
 
-        // NUCLEAR OPTION: Block ALL rotation and movement packets
-        if (packetType == PacketType.Play.Client.PLAYER_ROTATION ||
-                packetType == PacketType.Play.Client.PLAYER_POSITION ||
-                packetType == PacketType.Play.Client.PLAYER_POSITION_AND_ROTATION ||
-                packetType == PacketType.Play.Client.PLAYER_FLYING ||
-                packetType == PacketType.Play.Client.PLAYER_ABILITIES ||
-                packetType == PacketType.Play.Client.PLAYER_INPUT ||
-                packetType == PacketType.Play.Client.VEHICLE_MOVE ||
-                packetType == PacketType.Play.Client.STEER_VEHICLE) {
+        // TIMEOUT PREVENTION: Check if we should allow this packet
+        if (shouldAllowPacket(player, packetType)) {
+            return; // Allow packet to prevent timeout
+        }
 
-            // Log for debugging - show ALL blocked packets
+        // Block selective movement packets (not ALL to prevent timeout)
+        if (packetType == PacketType.Play.Client.PLAYER_ROTATION ||
+                packetType == PacketType.Play.Client.PLAYER_POSITION_AND_ROTATION) {
+
+            // Increment block counter
+            UUID uuid = player.getUniqueId();
+            packetBlockCount.put(uuid, packetBlockCount.getOrDefault(uuid, 0) + 1);
+
+            // Log for debugging - show blocked packets
             if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
                 Loadscreens.getInstance().getLogger().info("BLOCKED " + packetType + " from " + player.getName());
             }
@@ -314,18 +311,17 @@ public class PacketManager implements PacketListener {
             return;
         }
 
-        // Log ANY packet that's NOT being blocked for debugging
-        if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
-            // Only log movement/rotation related packets that we're NOT blocking
-            String packetName = packetType.toString();
-            if (packetName.contains("PLAYER") || packetName.contains("POSITION") ||
-                packetName.contains("ROTATION") || packetName.contains("LOOK") ||
-                packetName.contains("MOVE") || packetName.contains("HEAD")) {
-                Loadscreens.getInstance().getLogger().warning("UNBLOCKED PACKET: " + packetType + " from " + player.getName());
+        // ALLOW player position and flying packets to maintain connection
+        if (packetType == PacketType.Play.Client.PLAYER_POSITION ||
+                packetType == PacketType.Play.Client.PLAYER_FLYING) {
+            // Allow these to prevent timeout, just log if debugging
+            if (Loadscreens.getInstance().getConfig().getBoolean("global.debug", false)) {
+                Loadscreens.getInstance().getLogger().info("ALLOWED " + packetType + " from " + player.getName() + " (timeout prevention)");
             }
+            return;
         }
 
-        // Block ALL other input packets
+        // Block interaction packets but allow movement for connection health
         if (packetType == PacketType.Play.Client.INTERACT_ENTITY ||
                 packetType == PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT ||
                 packetType == PacketType.Play.Client.PLAYER_DIGGING ||
@@ -333,14 +329,13 @@ public class PacketManager implements PacketListener {
                 packetType == PacketType.Play.Client.CLICK_WINDOW ||
                 packetType == PacketType.Play.Client.CREATIVE_INVENTORY_ACTION ||
                 packetType == PacketType.Play.Client.CLOSE_WINDOW ||
-                packetType == PacketType.Play.Client.HELD_ITEM_CHANGE ||
-                packetType == PacketType.Play.Client.CHAT_MESSAGE) {
+                packetType == PacketType.Play.Client.HELD_ITEM_CHANGE) {
 
             event.setCancelled(true);
             return;
         }
 
-        // Only allow specific admin commands
+        // Allow chat commands for admin control
         if (packetType == PacketType.Play.Client.CHAT_COMMAND) {
             if (player.hasPermission("loadscreens.admin")) {
                 try {
@@ -357,8 +352,14 @@ public class PacketManager implements PacketListener {
             return;
         }
 
-        // Block everything else as fallback
-        event.setCancelled(true);
+        // Block chat but allow other packets for connection health
+        if (packetType == PacketType.Play.Client.CHAT_MESSAGE) {
+            event.setCancelled(true);
+            return;
+        }
+        
+        // CRITICAL TIMEOUT FIX: Don't block everything else - allow unknown packets
+        // This prevents timeout by allowing keepalive and other essential packets
     }
 
     @Override
@@ -409,6 +410,10 @@ public class PacketManager implements PacketListener {
         }
         blockedPlayers.clear();
         originalStates.clear();
+        
+        // Clean up connection monitoring
+        lastKeepAlive.clear();
+        packetBlockCount.clear();
     }
 
     // Enhanced PlayerState class
