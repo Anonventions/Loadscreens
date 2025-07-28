@@ -104,6 +104,7 @@ placeholders:
 | `/loadscreen info` | `loadscreens.admin` | Show plugin information |
 | `/loadscreen stats` | `loadscreens.admin` | Show session statistics |
 | `/loadscreen types` | `loadscreens.admin` | List available types |
+| `/loadscreen ai` | `loadscreens.admin` | Show AI agent information |
 
 ## 🔐 Permissions
 

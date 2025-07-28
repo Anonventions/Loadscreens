@@ -192,6 +192,11 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
                 }
                 break;
 
+            case "ai":
+            case "agent":
+                sendAIInfo(sender);
+                break;
+
             default:
                 sendHelp(sender);
                 break;
@@ -230,6 +235,8 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("║ /loadscreen clear - Clear placeholder cache                 ║")
                 .color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("║ /loadscreen hotreload - Hot reload plugin                   ║")
+                .color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("║ /loadscreen ai - Show AI agent information                  ║")
                 .color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("╚══════════════════════════════════════════════════════════════╝")
                 .color(NamedTextColor.GOLD));
@@ -405,6 +412,45 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    private void sendAIInfo(CommandSender sender) {
+        sender.sendMessage(Component.text("╔══════════════════════════════════════════════════════════════╗")
+                .color(NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("║                    AI AGENT INFORMATION                     ║")
+                .color(NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("╠══════════════════════════════════════════════════════════════╣")
+                .color(NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("║ AI Assistant: Claude                                        ║")
+                .color(NamedTextColor.BLUE));
+        sender.sendMessage(Component.text("║ Created by: Anthropic                                       ║")
+                .color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("║ Version: Claude 3.5 Sonnet                                  ║")
+                .color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("║ Purpose: AI Assistant for Development & Support             ║")
+                .color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("╠══════════════════════════════════════════════════════════════╣")
+                .color(NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("║ Capabilities:                                                ║")
+                .color(NamedTextColor.WHITE));
+        sender.sendMessage(Component.text("║ • Code analysis and debugging                               ║")
+                .color(NamedTextColor.GREEN));
+        sender.sendMessage(Component.text("║ • Plugin development assistance                             ║")
+                .color(NamedTextColor.GREEN));
+        sender.sendMessage(Component.text("║ • Configuration optimization                                ║")
+                .color(NamedTextColor.GREEN));
+        sender.sendMessage(Component.text("║ • Documentation generation                                  ║")
+                .color(NamedTextColor.GREEN));
+        sender.sendMessage(Component.text("║ • Performance analysis                                      ║")
+                .color(NamedTextColor.GREEN));
+        sender.sendMessage(Component.text("╠══════════════════════════════════════════════════════════════╣")
+                .color(NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("║ Current Task: Enhancing Loadscreens Plugin                  ║")
+                .color(NamedTextColor.AQUA));
+        sender.sendMessage(Component.text("║ Status: Active and Ready to Assist                          ║")
+                .color(NamedTextColor.GREEN));
+        sender.sendMessage(Component.text("╚══════════════════════════════════════════════════════════════╝")
+                .color(NamedTextColor.GOLD));
+    }
+
     private int parseInt(String str, int defaultValue) {
         try {
             return Integer.parseInt(str);
@@ -420,7 +466,7 @@ public class LoadscreenCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 1) {
-            return Arrays.asList("reload", "test", "show", "stop", "stopall", "info", "stats", "types", "version", "debug", "clear", "hotreload")
+            return Arrays.asList("reload", "test", "show", "stop", "stopall", "info", "stats", "types", "version", "debug", "clear", "hotreload", "ai", "agent")
                     .stream()
                     .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());

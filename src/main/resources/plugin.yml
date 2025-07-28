@@ -17,9 +17,10 @@ commands:
   loadscreen:
     description: Loadscreen management commands
     usage: |
-      /loadscreen <reload|test|stop|stopall|info>
+      /loadscreen <reload|test|stop|stopall|info|ai>
       /loadscreen test [type] - Test specific loadscreen type
       /loadscreen show <player> <type> [delay] - Show loadscreen to player
+      /loadscreen ai - Show AI agent information
     permission: loadscreens.admin
     aliases: [ls, loadscr]
 
